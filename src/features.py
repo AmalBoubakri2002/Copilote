@@ -1,35 +1,44 @@
-"""Étape 2 : construction des variables (une ligne = une session).
+"""Étape 2 : variables « fréquences » (une ligne = une session), utilisées par l'Extra Trees.
 
-Familles de variables :
-  - navigateur          : one-hot (4 navigateurs)
-  - globales            : nb d'actions, durée, rythme, part en modification, ...
-  - act__ / ecr__ / conf__ / chn__ : fréquences relatives des actions de base,
-        écrans, configurations d'écran et chaînes (vocabulaire appris sur le TRAIN,
-        seuil min_df sessions)
-  - bi__                : fréquences relatives des bigrammes d'actions consécutives
+Deux constructeurs, tous deux appris sur le train (vocabulaire) puis appliqués à n'importe quel jeu :
+
+  Constructeur : navigateur (one-hot), variables globales (nombre d'actions, durée, rythme...),
+                 fréquences relatives des actions, écrans, configurations, chaînes
+                 et bigrammes d'actions consécutives.
+  Debut        : indicateurs binaires sur la façon dont la session démarre
+                 (premier écran, première action, trois premières actions...).
+
+Un jeton n'est conservé que s'il apparaît dans au moins MIN_DF sessions du train.
 """
 import numpy as np
 import pandas as pd
 from sklearn.feature_extraction.text import CountVectorizer
 
 NAVIGATEURS = ["Firefox", "Google Chrome", "Microsoft Edge", "Opera"]
-MIN_DF = 5   # un jeton doit apparaître dans >= 5 sessions du train
+MIN_DF = 5
 
 
-def _jetons(df):
-    """Pour chaque session, une liste de jetons par famille."""
-    fam = {"act": [], "ecr": [], "conf": [], "chn": [], "bi": []}
-    for acts in df["actions"]:
-        base = [a[0] for a in acts]
-        fam["act"].append(base)
-        fam["ecr"].append([a[1] for a in acts if a[1]])
-        fam["conf"].append([a[2] for a in acts if a[2]])
-        fam["chn"].append([a[3] for a in acts if a[3]])
-        fam["bi"].append([f"{x} > {y}" for x, y in zip(base, base[1:])])
-    return fam
+def identite(jetons):
+    """Analyseur de CountVectorizer : les jetons sont déjà découpés, on les garde tels quels."""
+    return jetons
 
 
-def _globales(df):
+# ------------------------------------------------------------------ Constructeur
+def jetons_par_famille(df):
+    """Pour chaque session, la liste de jetons de chaque famille."""
+    familles = {"act": [], "ecr": [], "conf": [], "chn": [], "bi": []}
+    for actions in df["actions"]:
+        base = [a[0] for a in actions]
+        familles["act"].append(base)
+        familles["ecr"].append([a[1] for a in actions if a[1]])
+        familles["conf"].append([a[2] for a in actions if a[2]])
+        familles["chn"].append([a[3] for a in actions if a[3]])
+        familles["bi"].append([f"{x} > {y}" for x, y in zip(base, base[1:])])
+    return familles
+
+
+def variables_globales(df):
+    """Statistiques globales de chaque session."""
     n = df["actions"].apply(len)
     duree = df["temps"].apply(lambda t: max(t) if len(t) else 0)
     g = pd.DataFrame(index=df.index)
@@ -46,27 +55,62 @@ def _globales(df):
 
 
 class Constructeur:
-    """fit() apprend les vocabulaires sur le train ; transform() les applique."""
+    """fit() apprend les vocabulaires sur le train ; transform() construit la matrice de variables."""
 
     def fit(self, df_train):
-        fam = _jetons(df_train)
-        self.vecs = {}
-        for nom, docs in fam.items():
-            v = CountVectorizer(analyzer=lambda x: x, min_df=MIN_DF)
-            v.fit(docs)
-            self.vecs[nom] = v
+        self.vecteurs = {
+            famille: CountVectorizer(analyzer=identite, min_df=MIN_DF).fit(docs)
+            for famille, docs in jetons_par_famille(df_train).items()}
         return self
 
     def transform(self, df):
-        n = df["actions"].apply(len).to_numpy().astype(float)
-        n_safe = np.maximum(n, 1)[:, None]
-        blocs = []
-        nav = pd.DataFrame({f"nav__{k}": (df["navigateur"] == k).astype(int) for k in NAVIGATEURS},
-                           index=df.index)
-        blocs += [nav, _globales(df)]
-        fam = _jetons(df)
-        for nom, v in self.vecs.items():
-            M = v.transform(fam[nom]).toarray() / n_safe      # fréquence relative
-            cols = [f"{nom}__{t}" for t in v.get_feature_names_out()]
-            blocs.append(pd.DataFrame(M, index=df.index, columns=cols))
+        n_actions = np.maximum(df["actions"].apply(len).to_numpy().astype(float), 1)[:, None]
+        navigateur = pd.DataFrame({f"nav__{k}": (df["navigateur"] == k).astype(int) for k in NAVIGATEURS},
+                                  index=df.index)
+        blocs = [navigateur, variables_globales(df)]
+        jetons = jetons_par_famille(df)
+        for famille, vecteur in self.vecteurs.items():
+            frequences = vecteur.transform(jetons[famille]).toarray() / n_actions   # fréquence relative
+            colonnes = [f"{famille}__{t}" for t in vecteur.get_feature_names_out()]
+            blocs.append(pd.DataFrame(frequences, index=df.index, columns=colonnes))
         return pd.concat(blocs, axis=1)
+
+
+# ------------------------------------------------------------------ Debut
+class Debut:
+    """Indicateurs binaires sur le début de session : 1er écran, 2 premiers écrans, 1ère configuration,
+    1ère chaîne, 1ère action et 3 premières actions."""
+
+    @staticmethod
+    def _jetons(df):
+        sessions = []
+        for actions in df["actions"]:
+            base = [a[0] for a in actions]
+            ecrans = [a[1] for a in actions if a[1]]
+            confs = [a[2] for a in actions if a[2]]
+            chaines = [a[3] for a in actions if a[3]]
+            jetons = []
+            if ecrans:
+                jetons.append("ecr1=" + ecrans[0])
+            if len(ecrans) > 1:
+                jetons.append("ecr12=" + ecrans[0] + " > " + ecrans[1])
+            if confs:
+                jetons.append("conf1=" + confs[0])
+            if chaines:
+                jetons.append("chn1=" + chaines[0])
+            if base:
+                jetons.append("act1=" + base[0])
+            if len(base) >= 3:
+                jetons.append("act123=" + " | ".join(base[:3]))
+            sessions.append(jetons)
+        return sessions
+
+    def fit(self, df_train):
+        self.vecteur = CountVectorizer(analyzer=identite, min_df=MIN_DF, binary=True)
+        self.vecteur.fit(self._jetons(df_train))
+        return self
+
+    def transform(self, df):
+        matrice = self.vecteur.transform(self._jetons(df)).toarray()
+        colonnes = ["deb__" + t for t in self.vecteur.get_feature_names_out()]
+        return pd.DataFrame(matrice, index=df.index, columns=colonnes)
