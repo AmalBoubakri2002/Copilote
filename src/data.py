@@ -1,17 +1,11 @@
 """Étape 1 : lecture et décomposition des traces Copilote.
 
 Une ligne du fichier = une session, sans en-tête, de longueur variable :
-
-    [util,]navigateur,action,action,...,t5,action,...      (util est absent du fichier de test)
-
-  - t5, t10, ... : marqueurs de temps (fenêtres de 5 secondes) ;
-  - une action s'écrit  Nom(écran)<configuration>$chaîne$1  où chaque partie est facultative :
+   une action s'écrit  Nom(écran)<configuration>$chaîne$1  où chaque partie est facultative :
         (écran)      écran courant
         <conf>       configuration de l'écran
         $chaîne$     chaîne de la fiche
         1 final      l'utilisateur est en modification
-
-Chaque action est représentée par un tuple (base, écran, conf, chaîne, modif).
 """
 import gzip
 import re
@@ -26,7 +20,7 @@ RE_TEMPS = re.compile(r"t(\d+)")
 RE_CHAINE = re.compile(r"\$([^$]*)\$$")
 RE_CONF = re.compile(r"<([^>]*)>")
 RE_ECRAN = re.compile(r"\(([^)]*)\)")
-# Action collée à un marqueur de temps, ex. "Création d'un écrant5" (virgule manquante dans le fichier)
+# Action collée à un marqueur de temps, ex. 
 RE_COLLE = re.compile(r"(.*[^\d\s])t(\d*[05])")
 
 

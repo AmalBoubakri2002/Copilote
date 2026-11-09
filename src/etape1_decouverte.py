@@ -1,10 +1,4 @@
 """ÉTAPE 1 : découverte des données, nettoyage, mise en forme tabulaire, premières explorations et visualisations.
-
-    python src/etape1_decouverte.py
-
-Produit :
-    outputs/tableau_sessions.csv.gz        une ligne = une session, variables globales + utilisateur + navigateur
-    outputs/figures/etape1_exploration.png  quatre graphiques de découverte
 """
 import gzip
 

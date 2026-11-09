@@ -1,10 +1,6 @@
 """ÉTAPE 2 : explorations plus avancées des données et développement d'un premier modèle de classification.
-
-    python src/etape2_premier_modele.py      (environ 4 minutes)
-
 Premier modèle : Extra Trees sur les fréquences relatives (features.py), validation croisée stratifiée
 en 4 plis. Les scores hors-échantillon sont enregistrés dans outputs/cache/ pour l'étape 3.
-
 Produit : outputs/figures/etape2_erreurs.png et outputs/cache/et_oof.npy
 """
 import matplotlib
@@ -32,7 +28,7 @@ classes = np.array(sorted(train["util"].unique()))
 y = np.searchsorted(classes, train["util"].to_numpy())
 K = len(classes)
 taille = np.bincount(y, minlength=K)
-rares = taille <= 5                                       # utilisateurs ayant 5 sessions ou moins
+rares = taille <= 5            # utilisateurs ayant 5 sessions ou moins
 
 # ------------------------------------------------------------------ A. exploration avancée
 titre("A. Quels éléments des traces sont propres à un utilisateur ?")

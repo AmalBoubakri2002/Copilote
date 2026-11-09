@@ -7,7 +7,6 @@ Deux constructeurs, tous deux appris sur le train (vocabulaire) puis appliqués 
                  et bigrammes d'actions consécutives.
   Debut        : indicateurs binaires sur la façon dont la session démarre
                  (premier écran, première action, trois premières actions...).
-
 Un jeton n'est conservé que s'il apparaît dans au moins MIN_DF sessions du train.
 """
 import numpy as np

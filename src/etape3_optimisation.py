@@ -1,38 +1,30 @@
 """ÉTAPE 3 : optimisation de la solution de classification automatique.
-
-    python src/etape2_premier_modele.py     # d'abord (fournit le score de l'Extra Trees)
-    python src/etape3_optimisation.py       # environ 8 minutes ; reprend là où il s'est arrêté (cache par pli)
-
 Démarche : on part du premier modèle de l'étape 2 (Extra Trees, F1 macro 0,9515) et on change UNE chose à la fois,
 en gardant ce qui améliore le F1 macro. Toutes les étapes sont comparées sur exactement les mêmes plis
 (validation croisée stratifiée en 4 plis, graine 0 : mêmes plis que l'étape 2).
-
     Partie A  Changement de représentation : n-grammes TF-IDF + SVM linéaire, enrichis famille par famille
     Partie B  Poids du navigateur, pondération des classes
     Partie C  Ensemble SVM + Extra Trees + KNN cosinus, puis correction du biais de fréquence
               (évaluée aussi sur des tests simulés de 324 sessions, voir plus bas)
-
 Fin du script : variables les plus influentes du modèle final (coefficients du SVM).
-Produit : outputs/figures/etape3_progression.png (et outputs/cache/pli*.npz)
-Le dernier modèle du tableau est exactement celui entraîné par `python src/main.py` (voir modele.py).
 """
 from functools import partial
 
 import matplotlib
 
 matplotlib.use("Agg")
-import matplotlib.pyplot as plt          # noqa: E402
-import numpy as np                       # noqa: E402
-from scipy.sparse import csr_matrix, hstack              # noqa: E402
-from sklearn.feature_extraction.text import TfidfVectorizer      # noqa: E402
-from sklearn.metrics import accuracy_score, f1_score     # noqa: E402
-from sklearn.model_selection import StratifiedKFold      # noqa: E402
-from sklearn.preprocessing import normalize              # noqa: E402
-from sklearn.svm import LinearSVC                        # noqa: E402
+import matplotlib.pyplot as plt          
+import numpy as np                     
+from scipy.sparse import csr_matrix, hstack            
+from sklearn.feature_extraction.text import TfidfVectorizer      
+from sklearn.metrics import accuracy_score, f1_score     
+from sklearn.model_selection import StratifiedKFold     
+from sklearn.preprocessing import normalize             
+from sklearn.svm import LinearSVC                       
 
-from data import SORTIES, charger_train                  # noqa: E402
-from features import NAVIGATEURS                         # noqa: E402
-from modele import BETA, NAV_POIDS, POIDS, SPECS, Classifieur, ngrammes, scores_knn, zligne      # noqa: E402
+from data import SORTIES, charger_train                 
+from features import NAVIGATEURS                       
+from modele import BETA, NAV_POIDS, POIDS, SPECS, Classifieur, ngrammes, scores_knn, zligne    
 
 GRAINE, N_PLIS = 0, 4
 CACHE = SORTIES / "cache"

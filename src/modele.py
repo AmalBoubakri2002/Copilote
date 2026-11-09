@@ -1,14 +1,11 @@
 """Étape 3 : modèle final (identification de l'utilisateur à partir d'une session).
-
 Idée : une session est une séquence d'actions. On la représente par des « sacs de n-grammes »
 pondérés TF-IDF (actions, écrans, configurations, couples action/écran...), puis on combine
 trois modèles complémentaires dont les scores sont normalisés ligne par ligne :
-
     0,8 x  SVM linéaire (classes équilibrées)   sur les n-grammes TF-IDF + navigateur
     0,1 x  Extra Trees (classes équilibrées)    sur les fréquences relatives (features.py)
     0,1 x  KNN cosinus                          moyenne des 3 meilleures similarités de chaque utilisateur
     -  0,5 x log(fréquence de l'utilisateur dans le train)    correction du biais de fréquence
-
 Poids et coefficient de correction ont été choisis par validation croisée avec simulation de tests
 (voir le rapport). Aucun label de validation ou de test n'est utilisé pour apprendre.
 """

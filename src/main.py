@@ -1,10 +1,5 @@
-"""Modèle final : entraîne sur tout le train et écrit la soumission Kaggle.
+#Modèle final
 
-    python src/main.py          (environ 2 minutes)  ->  outputs/submission.csv
-
-Données attendues dans data/ : train.csv.GZ, test.csv.GZ, sample_submission.csv
-La construction et l'évaluation de ce modèle sont décrites dans les étapes 1 à 3.
-"""
 import warnings
 
 import numpy as np
